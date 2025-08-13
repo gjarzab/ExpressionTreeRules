@@ -1,0 +1,30 @@
+bin/
+obj/
+/packages/
+riderModule.iml
+/_ReSharper.Caches/
+.idea/
+/src/.idea
+aws.xml
+
+# User-specific files
+*.user
+*.suo
+*.vspscc
+*.vssscc
+
+# Build output directories
+[Bb]uild/
+[Dd]ebug/
+[Rr]elease/
+TestResults/
+
+# Generated files
+*.log
+*.pdb
+*.exe
+*.dll
+
+# OS-specific files
+[Tt]humbs.db
+.DS_Store

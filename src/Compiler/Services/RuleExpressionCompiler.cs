@@ -24,7 +24,7 @@ namespace Compiler.Services
 
             var genericCompileMethod = GetType()
                 .GetMethods(BindingFlags.Public | BindingFlags.Instance)
-                .FirstOrDefault(_ => _.Name == nameof(Compile) && _.IsGenericMethod && _.GetGenericArguments().Length == 1);
+                .FirstOrDefault(m => m.Name == nameof(Compile) && m.IsGenericMethod && m.GetGenericArguments().Length == 1);
 
             if (genericCompileMethod == null)
             {

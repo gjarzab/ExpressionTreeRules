@@ -7,13 +7,11 @@ A lightweight and extensible rule engine for .NET. This engine dynamically compi
 - [Core Features](#core-features)
 - [Getting Started](#getting-started)
 - [Usage Guidance: Separate Evaluation from Side Effects](#usage-guidance-separate-evaluation-from-side-effects)
-- [Extensibility and Customization](#extensibility-and-customization)
-  - [The Context (IContext)](#the-context-icontext)
-  - [Custom Functions](#custom-functions)
-  - [Metadata Generation for UI](#metadata-generation-for-ui)
 - [How It Works](#how-it-works)
 - [Error Handling](#error-handling)
 - [Potential Use Cases](#potential-use-cases)
+- [Contributing](#contributing)
+- [License](#license)
 
 ---
 
@@ -39,8 +37,8 @@ Here’s a minimal example of defining, compiling, and executing a rule.
 ### 1. Define Your Context Class
 
 ```csharp
-using RuleEngine.Core;
-using RuleEngine.Metadata;
+using Core;
+using Metadata;
 
 public class ServiceContext : IContext
 {
@@ -74,8 +72,8 @@ public class ServiceContext : IContext
 
 ```csharp
 using Newtonsoft.Json.Linq;
-using RuleEngine.Compiler.Options;
-using RuleEngine.Compiler.Services;
+using Compiler.Options;
+using Compiler.Services;
 
 var context = new ServiceContext { ErrorCount = 10 };
 var jsonRule = JObject.Parse("..."); // Load JSON above
@@ -94,13 +92,13 @@ compiledRule.EvaluateAndExecute(context);
 
 ## Usage Guidance: Separate Evaluation from Side Effects
 
-**Rules and actions must not perform I/O or call external systems directly.**  
-Instead, rules should **store instructions** in the context for the application to process later.
+**Rules and actions should not perform I/O**  
+Instead, rules should **produce instructions** for the application to process separately.
 
 ### Benefits of This Approach
 
 - **Testability** – Rules can be tested in isolation without external dependencies.
-- **Performance** – Execution remains fast because no blocking I/O occurs inside the engine.
+- **Performance** – Execution remains fast because no I/O occurs while evaluating conditions or actions.
 - **Flexibility** – The same evaluated instructions can be processed in different ways depending on the execution environment.
 - **Safety** – Prevents rules from making unapproved or unsafe system changes directly.
 
@@ -171,8 +169,8 @@ public class SendCustomerNotificationInstruction : IActionInstruction
 #### Context Implementation
 
 ```csharp
-using RuleEngine.Core;
-using RuleEngine.Metadata;
+using Core;
+using Metadata;
 
 public class MaintenanceContext : IContext
 {
@@ -261,8 +259,8 @@ public static class MaintenanceContextExtensions
 
 ```csharp
 using Newtonsoft.Json.Linq;
-using RuleEngine.Compiler.Options;
-using RuleEngine.Compiler.Services;
+using Compiler.Options;
+using Compiler.Services;
 
 var jsonRule = JObject.Parse("..."); // JSON above
 
@@ -297,14 +295,6 @@ foreach (var instruction in context.Instructions)
 ```
 
 ---
-
-## Extensibility and Customization
-
-The rule engine supports adding domain-specific logic via:
-
-- Implementing `IContext` with domain data and operations
-- Adding custom methods or extension methods
-- Annotating with `[MethodDescription]`, `[ParameterDescription]`, and `[ParameterValueProvider]` for UI integration
 
 #### Example Context Description (JSON)
 
@@ -353,7 +343,7 @@ Here is an example of the JSON representation of the `ContextDescription` object
 
 ## Error Handling
 
-The engine throws exceptions for invalid rules:
+During the compilation process you may encounter the following exceptions:
 
 - `ExpressionException` – Unsupported operators or type mismatches.
 - `LiteralParseException` – Invalid literal values.

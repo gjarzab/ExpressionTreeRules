@@ -9,6 +9,7 @@ namespace UnitTests
 
         public string TestField1 { get; set; }
         public InnerContext Inner { get; set; }
+        public DateTime DateField { get; set; }
 
         public bool TestMethod1(int someId)
         {

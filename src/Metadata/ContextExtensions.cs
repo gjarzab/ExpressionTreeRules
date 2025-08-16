@@ -25,6 +25,8 @@ namespace Metadata
                     .Where(member => member.MemberType == MemberTypes.Field || member.MemberType == MemberTypes.Property && member.Name != nameof(IContext.ContextName))
                     .ToArray();
 
+                var visitedTypes = new HashSet<Type> { type };
+
                 foreach (var member in candidates)
                 {
                     var omitAttribute = member.GetCustomAttribute<OmitFromDescriptionAttribute>(false);
@@ -38,7 +40,7 @@ namespace Metadata
                         name: member.Name,
                         type: GetValueType(memberType),
                         path: member.Name,
-                        members: GetMembersOfType(memberType, member.Name).ToList(),
+                        members: GetMembersOfType(memberType, member.Name, visitedTypes).ToList(),
                         methods: GetMethodsForMember(member).ToList()
                     ));
                 }
@@ -47,11 +49,13 @@ namespace Metadata
             });
         }
 
-        private static IEnumerable<ContextMemberDescription> GetMembersOfType(Type memberType, string path)
+        private static IEnumerable<ContextMemberDescription> GetMembersOfType(Type memberType, string path, ISet<Type> visitedTypes)
         {
             ArgumentNullException.ThrowIfNull(memberType);
-
-            if (memberType.IsPrimitive || memberType == typeof(string))
+            
+            var alreadyVisited = visitedTypes.Contains(memberType);
+            var fromSystemNamespace = memberType.Namespace != null && memberType.Namespace.StartsWith("System");
+            if (memberType.IsPrimitive || memberType == typeof(string) || fromSystemNamespace || alreadyVisited)
             {
                 return [];
             }
@@ -78,13 +82,15 @@ namespace Metadata
                 }
             }
 
+            var newVisitedTypes = new HashSet<Type>(visitedTypes) { memberType };
+
             foreach (var member in members)
             {
                 var memberChildType = GetMemberType(member);
                 var memberName = member.Name;
                 var childPath = string.IsNullOrEmpty(path) ? $"{memberName}" : $"{path}.{memberName}";
 
-                var childMemberDescriptions = GetMembersOfType(memberChildType, childPath);
+                var childMemberDescriptions = GetMembersOfType(memberChildType, childPath, newVisitedTypes);
 
                 var contextDescription = new ContextMemberDescription(
                     name: member.Name,
@@ -102,7 +108,8 @@ namespace Metadata
 
         private static IEnumerable<ContextMemberMethodDescription> GetMethodsForType(Type type)
         {
-            if (type.IsPrimitive)
+            var fromSystemNamespace = type.Namespace != null && type.Namespace.StartsWith("System");
+            if (type.IsPrimitive || fromSystemNamespace)
             {
                 return [];
             }

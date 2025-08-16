@@ -1,4 +1,5 @@
 using Metadata;
+using Newtonsoft.Json;
 
 namespace UnitTests
 {
@@ -12,17 +13,24 @@ namespace UnitTests
 
             // Act
             var description = ContextExtensions.GetContextDescription(contextType);
-
             // Assert
             Assert.NotNull(description);
             Assert.Equal(nameof(TestContext), description.ContextName);
             
-            Assert.Equal(2, description.Members.Count);
+            Assert.Equal(3, description.Members.Count);
             var testField1 = description.Members.FirstOrDefault(m => m.Name == "TestField1");
             Assert.NotNull(testField1);
             Assert.Equal("TestField1", testField1.Name);
             Assert.Equal("STRING", testField1.Type);
             Assert.Equal("TestField1", testField1.Path);
+
+            var dateField = description.Members.FirstOrDefault(m => m.Name == "DateField");
+            Assert.NotNull(dateField);
+            Assert.Equal("DateField", dateField.Name);
+            Assert.Equal("OTHER", dateField.Type);
+            Assert.Equal("DateField", dateField.Path);
+            Assert.Empty(dateField.Members);
+            Assert.Empty(dateField.Methods);
 
             Assert.Equal(4, description.Methods.Count);
             var testMethod1 = description.Methods.FirstOrDefault(m => m.Name == "TestMethod1");
@@ -94,6 +102,41 @@ namespace UnitTests
             var parameter = method.Parameters[0];
             Assert.Equal("role", parameter.Name);
             Assert.Equal("/api/v1/roles", parameter.ValueProviderEndpoint);
+        }
+
+        [Fact]
+        public void GetContextDescription_ShouldHandleRecursiveTypes()
+        {
+            // Arrange
+            var contextType = typeof(RecursiveContext);
+
+            // Act
+            var description = ContextExtensions.GetContextDescription(contextType);
+
+            // Assert
+            Assert.NotNull(description);
+            var parentMember = description.Members.FirstOrDefault(m => m.Name == "Parent");
+            Assert.NotNull(parentMember);
+            Assert.Empty(parentMember.Members); // Should not expand the recursive member
+        }
+
+        [Fact]
+        public void GetContextDescription_ShouldHandleCoRecursiveTypes()
+        {
+            // Arrange
+            var contextType = typeof(CoRecursiveA);
+
+            // Act
+            var description = ContextExtensions.GetContextDescription(contextType);
+
+            // Assert
+            Assert.NotNull(description);
+            var bMember = description.Members.FirstOrDefault(m => m.Name == "B");
+            Assert.NotNull(bMember);
+            Assert.Single(bMember.Members); // B should have one member 'A'
+            var aMember = bMember.Members.FirstOrDefault(m => m.Name == "A");
+            Assert.NotNull(aMember);
+            Assert.Empty(aMember.Members); // Should not expand the co-recursive member 'A'
         }
     }
 }

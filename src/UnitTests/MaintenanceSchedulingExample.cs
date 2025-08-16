@@ -89,6 +89,10 @@ namespace UnitTests
         public void Should_Generate_WorkOrder_And_Notification_For_Overdue_Furnace_In_Season()
         {
             // Arrange
+            // If: IsEquipmentType("Furnace") and IsServiceOverdue(11) and IsInPreWinterSeason()
+            // Then:
+            //      - CreateWorkOrder("Furnace Tune-Up")
+            //      - SendCustomerNotification("Furnace Check-up Reminder")
             var ruleJson = new JObject
             {
                 ["name"] = "Schedule Annual Furnace Tune-Up",

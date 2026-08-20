@@ -1,0 +1,97 @@
+name: Temporary transducer benchmark
+
+on:
+  push:
+    branches:
+      - 'chatgpt/transducers-bench-20260820'
+    paths:
+      - '.github/workflows/transducers-bench.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+      DOTNET_NOLOGO: '1'
+      DOTNET_TieredPGO: '1'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Unpack benchmark source
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p _bench
+          base64 -d .chatgpt/transducers-bench/bundle.tgz.b64 | tar -xzf - -C _bench
+          find _bench/transducers-csharp-bench -maxdepth 2 -type f -print | sort
+
+      - name: Setup .NET 10.0.400
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.400'
+
+      - name: Capture environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd _bench/transducers-csharp-bench
+          mkdir -p results
+          {
+            echo '=== uname ==='
+            uname -a
+            echo
+            echo '=== lscpu ==='
+            lscpu
+            echo
+            echo '=== dotnet --info ==='
+            dotnet --info
+            echo
+            echo '=== affinity ==='
+            taskset -pc $$ || true
+          } | tee results/environment.txt
+
+      - name: Build Release
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd _bench/transducers-csharp-bench
+          dotnet build -c Release
+
+      - name: Correctness gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd _bench/transducers-csharp-bench
+          dotnet bin/Release/net10.0/TransducersBench.dll --verify-only | tee results/verification.log
+
+      - name: Full benchmark x3 on one CPU
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd _bench/transducers-csharp-bench
+          cpu="$(python3 - <<'PY'
+import os
+print(min(os.sched_getaffinity(0)))
+PY
+)"
+          echo "Pinned CPU: $cpu" | tee results/affinity.txt
+          for run in 1 2 3; do
+            echo "===== FULL RUN $run ====="
+            taskset -c "$cpu" dotnet bin/Release/net10.0/TransducersBench.dll --full \
+              | tee "results/full-run-${run}.log"
+            sleep 2
+          done
+
+      - name: Upload raw benchmark results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: transducers-benchmark-results
+          path: _bench/transducers-csharp-bench/results/
+          if-no-files-found: warn
+          retention-days: 7

@@ -6,6 +6,12 @@ on:
       - 'chatgpt/transducers-bench-20260820'
     paths:
       - '.github/workflows/transducers-bench.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/transducers-bench.yml'
+      - '.chatgpt/transducers-bench/**'
 
 permissions:
   contents: read
